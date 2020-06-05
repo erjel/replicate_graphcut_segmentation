@@ -1,142 +1,68 @@
-function objects_new = splitObjects(PixelIdxList, ImageSize)
+function new_PixelIdxList = splitObjects(PixelIdxList, ImageSize)
 
-    im_binary = zeros(ImageSize);
+    %%%%% parameters %%%%%
+    show_visualizations = false;
+    radius_thresh = 6;
+    
+    
+    %%%%% main %%%%%
+    im_binary = false(ImageSize);
     im_binary(PixelIdxList) = true;
     
-    f = figure();
-    ax  = axes(f);
     dist_trans = bwdist(~im_binary);
-    imagesc(dist_trans)
-    ax.YDir = 'normal';
-
-    im_skel = bwmorph(im_binary,'skel',Inf);
-
-    f = figure();
-    ax = axes(f);
-    imagesc(im_skel);
-    ax.YDir = 'normal';
-
-    % From skeleton and distance transform I now need to calculate the
-    % inscribed circles
-
-    [columnsInImage rowsInImage] = meshgrid(1:size(im_binary, 1), 1:size(im_binary, 2));
-
-    px_perim = zeros(size(im_skel));
-    im_skel_curr = im_skel;
-    circle_x = [];
-    circle_y = [];
-    circle_radii = [];
-
-    while any(im_skel_curr(:))
-
-        skeleton_points = find(im_skel_curr); % todo: better setdiff?
-        radii = dist_trans(skeleton_points);  % todo: better only delete indices?
-        [radius, idx] = max(radii);
-
-        [x, y] = ind2sub(size(im_skel), skeleton_points(idx));
-
-        circle_x(end+1) = x;
-        circle_y(end+1) = y;
-        circle_radii(end+1)= radius;
-
-        circlePixels = (rowsInImage - x).^2 ...
-            + (columnsInImage - y).^2 <= radius.^2;
-
-        px_perim = px_perim + bwperim(circlePixels);
-
-        im_skel_curr = im_skel_curr & ~circlePixels;
+   
+    if show_visualizations
+        
+        f = figure();
+        ax  = axes(f);
+        imagesc(dist_trans)
+        ax.YDir = 'normal';
     end
+
+    [circle_x, circle_y, circle_radii] = inscribedCircles(im_binary, dist_trans);
+    
+    [circle_x_new, circle_y_new, circle_radii_new] =  ...
+        restrictCircleRadii(circle_x, circle_y, circle_radii, radius_thresh, ...
+        dist_trans);
 
     %% Viszualize results
+    if show_visualizations
+        f = figure();
+        ax = axes(f);
+        hold(ax, 'on');
+        imagesc(ax, im_binary);
 
-    f = figure();
-    ax = axes(f);
-    hold(ax, 'on');
-    imagesc(ax, im_binary);
+        ax.YDir = 'normal';
+        ax.DataAspectRatio = [1 1 1];
+        ax.YLim = [0, size(im_binary, 1)];
+        ax.XLim = [0, size(im_binary, 1)];
+        
+        
+        draw_circles(ax, ...
+            circle_x_new,...
+            circle_y_new, ...
+            circle_radii_new, 'g');
+    
+        draw_circles(ax, ...
+            circle_x(circle_radii < radius_thresh) ,...
+            circle_y(circle_radii < radius_thresh), ...
+            circle_radii(circle_radii < radius_thresh), 'b');
 
-    ax.YDir = 'normal';
-    ax.DataAspectRatio = [1 1 1];
-    ax.YLim = [0, size(im_binary, 1)];
-    ax.XLim = [0, size(im_binary, 1)];
-
-    thresh = 6;
-
-    draw_circles(ax, ...
-        circle_x(circle_radii < thresh) ,...
-        circle_y(circle_radii < thresh), ...
-        circle_radii(circle_radii < thresh), 'b');
-
-    draw_circles(ax, ...
-        circle_x(circle_radii > thresh) ,...
-        circle_y(circle_radii > thresh), ...
-        circle_radii(circle_radii > thresh), 'w');
-
-
-    %% modify circles which are too large
-
-    last_idx_too_large = find(circle_radii > thresh, 1, 'last');
-
-    for i = 1:last_idx_too_large
-        r = circle_radii(i);
-        x = circle_x(i);
-        y = circle_y(i);
-        new_num = ceil(r / thresh);
-
-        desired_radius = r / new_num;
-
-        dist = (rowsInImage - x).^2 ...
-            + (columnsInImage - y).^2;
-
-        circlePixels = dist <= r.^2;
-
-        candidate_centers = dist_trans .* circlePixels;
-
-        mask = (candidate_centers < desired_radius) & circlePixels;
-
-
-        x_new = zeros(1, new_num);
-        y_new = zeros(1, new_num);
-        r_new = zeros(1, new_num);
-
-        candidate_centers_dist = dist(mask);
-        [~, idx] = min(candidate_centers_dist);
-
-        row_idxs = rowsInImage(mask);
-        col_idxs = columnsInImage(mask);
-        radii_idxs = dist_trans(mask);
-
-        x_new(1) = row_idxs(idx);
-        y_new(1) = col_idxs(idx);
-        r_new(1) = radii_idxs(idx);
-
-        % Assumptions:
-        % - other circle are must be on the oposite site of center point
-        % - there are only 2 points
-        assert(new_num == 2)
-
-        tmp = [x, y] - [x_new(1) - x, y_new(1) - y];
-        x_new(2) = tmp(1);
-        y_new(2) = tmp(2);
-        r_new(2) = dist_trans(x_new(2), y_new(2));
-
-        draw_circles(ax, x_new, y_new, r_new, 'g');
-
-        circle_x(end+1:end+2) = x_new;
-        circle_y(end+1:end+2) = y_new;
-        circle_radii(end+1:end+2) = r_new;
+        draw_circles(ax, ...
+            circle_x(circle_radii > radius_thresh) ,...
+            circle_y(circle_radii > radius_thresh), ...
+            circle_radii(circle_radii > radius_thresh), 'w');
+    
     end
+    
+    circle_x = circle_x_new;
+    circle_y = circle_y_new;
+    circle_radii = circle_radii_new;
 
-    circle_x(1:last_idx_too_large) = [];
-    circle_y(1:last_idx_too_large) = [];
-    circle_radii(1:last_idx_too_large) = [];
-
+    
     %% Generate graph for lCut method
-
-
-
-
     distances_ij = squareform(pdist([circle_x', circle_y']));
-    node_directions = determineTheta(circle_x, circle_y, distances_ij, thresh);
+    node_directions = calculateNodeDirections(circle_x, circle_y, distances_ij, radius_thresh);
 
     directions_ij = zeros(size(node_directions, 2));
     for j = 1:length(directions_ij)
@@ -164,38 +90,44 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
     cm_dist = parula(ceil(max(edge_distances(:))));
     cm_dir = parula(ceil(max(edge_angles(:))));
     
-    f = figure();
-    ax = axes(f);
-    hold(ax, 'on');
-    
-    imagesc(ax, im_binary(y_min:y_max,x_min:x_max))
-    ax.YDir = 'normal';
-    
-    for i = 1:numel(id_start)
-        plot(ax, ...
-        [circle_y(id_start(i)); circle_y(id_end(i))] - x_min, ...
-        [circle_x(id_start(i)); circle_x(id_end(i))] - y_min, ...
-        'Color', cm_dist(ceil(edge_distances(i)), :), ...
-        'LineWidth', 2)
+    if show_visualizations
+        f = figure();
+        ax = axes(f);
+        hold(ax, 'on');
+        
+        imagesc(ax, im_binary(y_min:y_max,x_min:x_max))
+        ax.YDir = 'normal';
+        
+        for i = 1:numel(id_start)
+            plot(ax, ...
+                [circle_y(id_start(i)); circle_y(id_end(i))] - x_min, ...
+                [circle_x(id_start(i)); circle_x(id_end(i))] - y_min, ...
+                'Color', cm_dist(ceil(edge_distances(i)), :), ...
+                'LineWidth', 2)
+        end
+        cb = colorbar(ax);
+        
+        f = figure();
+        ax = axes(f);
+        hold(ax, 'on');
+        
+        imagesc(ax, im_binary(y_min:y_max,x_min:x_max))
+        ax.YDir = 'normal';
+        
+        for i = 1:numel(id_start)
+            l = plot(ax, ...
+                [circle_y(id_start(i)); circle_y(id_end(i))] - x_min, ...
+                [circle_x(id_start(i)); circle_x(id_end(i))] - y_min, ...
+                'LineWidth', 2);
+            
+            if edge_angles(i) ~= 0
+                l.Color = cm_dir(ceil(edge_angles(i)), :);
+            end
+            
+        end
+        
+        cb = colorbar(ax);
     end
-    cb = colorbar(ax);
-    
-    f = figure();
-    ax = axes(f);
-    hold(ax, 'on');
-    
-    imagesc(ax, im_binary(y_min:y_max,x_min:x_max))
-    ax.YDir = 'normal';
-    
-    for i = 1:numel(id_start)
-        plot(ax, ...
-        [circle_y(id_start(i)); circle_y(id_end(i))] - x_min, ...
-        [circle_x(id_start(i)); circle_x(id_end(i))] - y_min, ...
-        'Color', cm_dir(ceil(edge_angles(i)), :), ...
-        'LineWidth', 2)
-    end
-    
-    cb = colorbar(ax);
     
     % first create adjecency matrix
     dist_thresh = 50;
@@ -217,6 +149,7 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
     
     factor_color = 1000;
     
+    if show_visualizations
     cm = parula(ceil(max(edge_weights) * factor_color));
     
     f = figure();
@@ -238,7 +171,7 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
         'LineWidth', 2)
     end
     cb = colorbar();
-    
+    end
     
     
 
@@ -253,11 +186,13 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
         i = find(~W_terminated, 1);  % TODO: optimization: do not really need find if is_terminal is calculated at the end...
         ids = W_subgraph_ids{i};
 
-        f = figure(),
-        ax = axes(f);
-        hold(ax, 'on');
-        imagesc(ax, im_binary);
-        scatter(ax,  circle_y(ids), circle_x(ids), 'r')
+        if show_visualizations
+            f = figure(),
+            ax = axes(f);
+            hold(ax, 'on');
+            imagesc(ax, im_binary);
+            scatter(ax,  circle_y(ids), circle_x(ids), 'r')
+        end
 
         if is_terminal(ids, distances_ij, directions_ij)
             W_terminated(i) = true;
@@ -275,10 +210,11 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
 
             ids_first = ids(clusterClasses(:, 1));
             ids_second = ids(clusterClasses(:, 2));
-
-            scatter(ax, circle_y(ids_first), circle_x(ids_first), 'w', 'filled');
-            scatter(ax, circle_y(ids_second), circle_x(ids_second), 'g', 'filled');
-
+            
+            if show_visualizations
+                scatter(ax, circle_y(ids_first), circle_x(ids_first), 'w', 'filled');
+                scatter(ax, circle_y(ids_second), circle_x(ids_second), 'g', 'filled');
+            end
             W_subgraphs{i} = w_first;
             W_subgraphs{end+1} = w_second;
 
@@ -289,12 +225,26 @@ function objects_new = splitObjects(PixelIdxList, ImageSize)
         safety_counter = safety_counter + 1;
     end
     
-    % TODO: workflow: Split the pixelIdxList based on the pixels (maybe just distance to circles?)
+    % Naive approach: for each pixelId calculate distance to all circle centers
+    % N_px x N_c
     
+    [x_px, y_px] = ind2sub(ImageSize, PixelIdxList);
     
+    px_dist = (x_px - circle_x).^2 + (y_px - circle_y).^2;
     
+    [~, center_id] = min(px_dist, [], 2);
     
+    new_PixelIdxList = cell(1, numel(W_subgraph_ids));
     
+    circle_center_ids = 1:numel(circle_x);
+    
+    for i = 1:numel(W_subgraph_ids)
+        
+        center_is_in_subgraph = ismember(circle_center_ids, W_subgraph_ids{i});
+        pixel_is_in_subgraph = ismember(center_id, find(center_is_in_subgraph));
 
+        new_PixelIdxList{i} = PixelIdxList(pixel_is_in_subgraph);
+
+    end
 
 end

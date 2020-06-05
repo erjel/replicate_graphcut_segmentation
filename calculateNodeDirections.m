@@ -1,18 +1,27 @@
-function node_directions = determineTheta(circle_x, circle_y, distances_ij, thresh)
+function node_directions = calculateNodeDirections(circle_x, circle_y, distances_ij, thresh)
     
     show_visualizations = false;
     if show_visualizations
         figure()
         voronoi(circle_x, circle_y);
     end
-    dt = delaunay(circle_x, circle_y);
     
-    % make the connections to single line segments such that I
-    % can calculate the distances
-    
-    ids = repelem(dt,1, 2);
-    ids = [ids(:, end), ids(:, 1:end-1)]';
-    ids = reshape(ids,2, [])';
+    if numel(circle_x) > 2
+        dt = delaunay(circle_x, circle_y);
+        % make the connections to single line segments such that I
+        % can calculate the distances
+
+        ids = repelem(dt,1, 2);
+        ids = [ids(:, end), ids(:, 1:end-1)]';
+        ids = reshape(ids,2, [])';
+        
+    elseif numel(circle_x) == 2
+        ids = [[1, 2]; [2, 1]];
+    else
+        % TODO: Error handling: Either prevent further splitting upstream,
+        % or add proper error handling.
+        error('Can not calculate direction with single node!')
+    end
     
     distances = distances_ij(sub2ind(size(distances_ij), ids(:, 1),ids(:, 2)));
     
@@ -66,7 +75,7 @@ function node_directions = determineTheta(circle_x, circle_y, distances_ij, thre
         
         % turn the directions into positive x direction
         cond = directions(1, :) < 0;
-        directions(:, cond) = -directions(:, cond)
+        directions(:, cond) = -directions(:, cond);
         
         
         angles = zeros(numel(neighbors));
