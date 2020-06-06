@@ -1,4 +1,4 @@
-function draw_circles(ax, x, y, r, color)
+function visCircles(ax, x, y, r, color)
     th = 0:pi/50:2*pi;
         
     for i = 1:numel(x)

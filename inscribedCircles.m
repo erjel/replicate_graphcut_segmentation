@@ -1,22 +1,17 @@
 function [circle_x, circle_y, circle_radii] = inscribedCircles(im_binary, dist_trans)
 
     %%%% parameters
-    show_visualizations = false;
+    show_vis = false;
     
     %%%% main
-
     ImageSize = size(im_binary);
     im_skel = bwmorph(im_binary,'skel',Inf);
     
     [columnsInImage, rowsInImage] = meshgrid( ...
             1:ImageSize(1), 1:ImageSize(2));
     
-    if show_visualizations
-    
-        f = figure();
-        ax = axes(f);
-        imagesc(im_skel);
-        ax.YDir = 'normal'; 
+    if show_vis
+        visImage(im_skel);
     end
 
     circle_x = [];
