@@ -1,7 +1,7 @@
 %%%% parameters %%%%
-filename = 'data\Pos11_frame000030_Nz19.tif';
+filename = fullfile('data', 'Pos11_frame000030_Nz19.tif');
 show_visualisations = false;
-show_result = false;
+show_result = true;
 
 
 %%%% imports %%%%
