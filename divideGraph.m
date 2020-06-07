@@ -1,8 +1,8 @@
-function W_subgraph_ids = divideGraph(W, circle_x, circle_y, distances_ij, directions_ij)
-    %%%% parameters %%%%
-    show_visualizations = false;
+function W_subgraph_ids = divideGraph(W, circle_x, circle_y, distances_ij, directions_ij, params)
+
+    show_vis = params.show_vis;
+    params_is_terminal = params.params_is_terminal;
     
-    %%%% main %%%%
     W_subgraphs = {W};
     W_subgraph_ids = {1:numel(circle_x)};
     W_terminated = zeros(1, numel(W_subgraphs));
@@ -14,7 +14,7 @@ function W_subgraph_ids = divideGraph(W, circle_x, circle_y, distances_ij, direc
         i = find(~W_terminated, 1);  % TODO: optimization: do not really need find if is_terminal is calculated at the end...
         ids = W_subgraph_ids{i};
 
-        if show_visualizations
+        if show_vis
             f = figure(),
             ax = axes(f);
             hold(ax, 'on');
@@ -22,7 +22,7 @@ function W_subgraph_ids = divideGraph(W, circle_x, circle_y, distances_ij, direc
             scatter(ax,  circle_y(ids), circle_x(ids), 'r')
         end
 
-        if is_terminal(ids, distances_ij, directions_ij)
+        if is_terminal(ids, distances_ij, directions_ij, params_is_terminal)
             W_terminated(i) = true;
         else
             w = W_subgraphs{i};
@@ -39,7 +39,7 @@ function W_subgraph_ids = divideGraph(W, circle_x, circle_y, distances_ij, direc
             ids_first = ids(clusterClasses(:, 1));
             ids_second = ids(clusterClasses(:, 2));
             
-            if show_visualizations
+            if show_vis
                 scatter(ax, circle_y(ids_first), circle_x(ids_first), 'w', 'filled');
                 scatter(ax, circle_y(ids_second), circle_x(ids_second), 'g', 'filled');
             end

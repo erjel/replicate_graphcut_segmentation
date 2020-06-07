@@ -1,9 +1,9 @@
-function node_directions = calculateNodeDirections(circle_x, circle_y, distances_ij, thresh)
-    
-    show_vis = false;
-    dist_thresh_factor = 1.75;
-    Ndim = 2;
-    N_hops = 5;
+function node_directions = calculateNodeDirections(circle_x, circle_y, distances_ij, thresh, params)
+
+    dist_thresh_factor = params.dist_thresh_factor;
+    Ndim = params.Ndim;
+    N_hops = params.N_hops;
+    show_vis = params.show_vis;
     
     if numel(circle_x) > 2
         dt = delaunay(circle_x, circle_y);

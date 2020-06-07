@@ -1,11 +1,9 @@
-function W = constructGraph(distances_ij, directions_ij)
-    %%%% parameters %%%%
-    dist_thresh = 50;
-    sig_dist = 10;
-    sig_theta = 0.1;
+function W = constructGraph(distances_ij, directions_ij, params)
     
-    %%%% main %%%%
-
+    dist_thresh = params.dist_thresh;
+    sig_dist = params.sig_dist;
+    sig_theta = params.sig_theta;
+    
     W_dist = exp(-distances_ij.^2/(sig_dist^2));
     W_dist(distances_ij > dist_thresh) = 0;
 

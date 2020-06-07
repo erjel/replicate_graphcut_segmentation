@@ -1,9 +1,8 @@
-function [circle_x, circle_y, circle_radii] = inscribedCircles(im_binary, dist_trans)
+function [circle_x, circle_y, circle_radii] = inscribedCircles(im_binary, dist_trans, ...
+    params)
 
-    %%%% parameters
-    show_vis = false;
+    show_vis = params.show_vis;
     
-    %%%% main
     ImageSize = size(im_binary);
     im_skel = bwmorph(im_binary,'skel',Inf);
     
